@@ -10,10 +10,11 @@ void processInput(GLFWwindow* window);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
 const float vertices[] = {
-    0.5f, 0.5f, 0.0f,
-    0.5f, -0.5f, 0.0f,
-   -0.5f, -0.5f, 0.0f,
-   -0.5f, 0.5f, 0.0f
+    // Posiktion          // Colors
+    0.5f,  0.5f, 0.0f,    1.0f, 0.0f, 0.0f, // Oben rechts
+    0.5f, -0.5f, 0.0f,    0.0f, 1.0f, 0.0f, // Unten Rechts
+   -0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f, // Oben Links
+   -0.5f,  0.5f, 0.0f,    1.0f, 1.0f, 1.0f  // Unten Links
 };
 const int indices[] = {
     0, 1, 3,
@@ -21,17 +22,21 @@ const int indices[] = {
 };
 
 const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos; \n"
+"layout (location = 0) in vec3 aPos;"
+"layout (location = 1) in vec3 aColor;"
+"out vec3 ourColor;"
 "void main()\n"
 "{\n"
 "    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+"    ourColor = aColor; "
 "}\0";
 
 const char *fragmentShaderSource = "#version 330 core\n"
 "out vec4 FragColor; \n"
+"in vec3 ourColor;"
 "void main()\n"
 "{\n"
-"    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+"    FragColor = vec4(ourColor,1.0);\n"
 "}\0";
 
 int main()
@@ -66,16 +71,31 @@ int main()
     // Setzt die function was passieren soll wenn das window das resiced wird.
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    // int nrAttributes;
+    // glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
+    // std::cout << "Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
+
+    unsigned int VAO;
+    glGenVertexArrays(1, &VAO);
+
+    // Bindet den VAO
+    glBindVertexArray(VAO);
 
     // Macht neunen Vertex Buffer Object
     unsigned int VBO;
     glGenBuffers(1, &VBO);
     // Binded den VBO
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+
+    // Erstellen vom EBO
+    unsigned int EBO;
+    glGenBuffers(1, &EBO);
+
     // Gibt die Daten rüber die wir and die GPU schicken wollen
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Einfach den cetexShader "id" machen
+    // Einfach den vetexShader "id" machen
     unsigned int vertexShader;
     vertexShader = glCreateShader(GL_VERTEX_SHADER);
                
@@ -117,9 +137,9 @@ int main()
     glLinkProgram(shaderProgram);
 
     // Error handling wie beim Fragment/Vertexshader
-    glGetShaderiv(shaderProgram, GL_LINK_STATUS, &success);
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if(!success) {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        glGetProgramInfoLog(fragmentShader, 512, NULL, infoLog);
         std::cout << "Error mit dem Linken von den Shader: " << infoLog << std::endl;
     }
 
@@ -130,47 +150,44 @@ int main()
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    // Beschrieben wo genau unser vertex data in der certex shader hin kommt? Aber besser noch mal nach lesen
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // Macht ein neues Vertex Array object
-    unsigned int VAO;
-    glGenVertexArrays(1, &VAO);
-
-    // Bindet den VAO
-    glBindVertexArray(VAO);
-  
     // Kopiert die vertices array in einen buffer damit OpenGL es bentutzen kann
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     // Erstellen von den Vertex attributes ponters
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Erstellen vom EBO
-    unsigned int EBO;
-    glGenBuffers(1, &EBO);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+
 
     while (!glfwWindowShouldClose(window)) {
 
         // Processes the input 
         processInput(window);
 
-         
+        
 
         // Cleared hintergrund
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
 
-        // Zeichnen vom 3Eck
+        //float timeValue = glfwGetTime();
+        //float greenValue = sin(timeValue)/ 2 + 0.5f;
+
+        //int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
         glUseProgram(shaderProgram);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        //glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1);
+
+        // Zeichnen vom 3Eck 
+
+        glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // Swaped front and back buffer
